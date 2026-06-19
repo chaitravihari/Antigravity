@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="View and tweet Google Cloud BigQuery release notes in a clean, modern interface.">
+    <title>BigQuery Release Pulse</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- App Shell -->
+    <div class="app-shell">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="logo-container">
+                    <svg class="app-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="var(--color-primary)" />
+                        <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="var(--color-primary-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <div class="logo-text">
+                        <span class="logo-main">BigQuery</span>
+                        <span class="logo-sub">Release Pulse</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <!-- Last Refreshed Info -->
+                <div class="refresh-info">
+                    <span class="refresh-label">Last updated:</span>
+                    <span id="last-updated" class="refresh-time">Checking...</span>
+                </div>
+                
+                <!-- Action Buttons -->
+                <button id="refresh-btn" class="icon-btn tooltip" aria-label="Refresh release notes">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                    </svg>
+                    <span class="tooltip-text">Refresh Feed</span>
+                </button>
+                
+                <button id="theme-toggle" class="icon-btn tooltip" aria-label="Toggle visual theme">
+                    <!-- Sun Icon (visible in dark theme) -->
+                    <svg class="icon-svg sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <!-- Moon Icon (visible in light theme) -->
+                    <svg class="icon-svg moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <span class="tooltip-text">Toggle Theme</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic Filter Panel -->
+        <section class="filters-section">
+            <div class="filters-container">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="search-input" placeholder="Search updates (e.g., embeddings, Studio, Gemini)..." autocomplete="off">
+                    <button id="search-clear-btn" class="search-clear-btn" aria-label="Clear search" style="display:none;">&times;</button>
+                </div>
+                
+                <div class="filter-pills-wrapper">
+                    <div id="type-filters" class="filter-pills">
+                        <button class="filter-pill active" data-type="all">All Updates</button>
+                        <button class="filter-pill" data-type="Feature">Features</button>
+                        <button class="filter-pill" data-type="Announcement">Announcements</button>
+                        <button class="filter-pill" data-type="Issue">Issues</button>
+                        <button class="filter-pill" data-type="Deprecation">Deprecations</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Selection Status Bar -->
+            <div id="selection-status-bar" class="selection-status-bar" style="display: none;">
+                <div class="selection-info">
+                    <span class="pulse-dot"></span>
+                    <span id="selection-count">0 items selected</span>
+                </div>
+                <div class="selection-actions">
+                    <button id="clear-selection-btn" class="btn btn-secondary btn-sm">Clear Selection</button>
+                    <button id="open-composer-btn" class="btn btn-primary btn-sm">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                        Tweet Selected
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div id="releases-container" class="releases-container">
+                <!-- Skeleton Loader (displayed during fetching) -->
+                <div class="skeleton-stream">
+                    <div class="skeleton-date-group">
+                        <div class="skeleton-date-title"></div>
+                        <div class="skeleton-card">
+                            <div class="skeleton-header">
+                                <div class="skeleton-badge"></div>
+                                <div class="skeleton-checkbox"></div>
+                            </div>
+                            <div class="skeleton-body">
+                                <div class="skeleton-line short"></div>
+                                <div class="skeleton-line"></div>
+                                <div class="skeleton-line"></div>
+                            </div>
+                            <div class="skeleton-footer">
+                                <div class="skeleton-action"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-date-group">
+                        <div class="skeleton-date-title"></div>
+                        <div class="skeleton-card">
+                            <div class="skeleton-header">
+                                <div class="skeleton-badge"></div>
+                                <div class="skeleton-checkbox"></div>
+                            </div>
+                            <div class="skeleton-body">
+                                <div class="skeleton-line short"></div>
+                                <div class="skeleton-line"></div>
+                            </div>
+                            <div class="skeleton-footer">
+                                <div class="skeleton-action"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Bottom Floating Composer Drawer -->
+        <div id="composer-drawer" class="composer-drawer">
+            <div class="drawer-overlay" id="drawer-overlay"></div>
+            <div class="drawer-content">
+                <div class="drawer-header">
+                    <div class="drawer-header-left">
+                        <span class="drawer-title-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                        </span>
+                        <h3>X (Twitter) Composer</h3>
+                    </div>
+                    <button id="close-composer-btn" class="drawer-close" aria-label="Close composer">&times;</button>
+                </div>
+                
+                <div class="drawer-body">
+                    <!-- Preview of selected update(s) -->
+                    <div class="composer-preview-box">
+                        <div class="preview-label">Selected Updates:</div>
+                        <ul id="selected-list-preview" class="selected-list-preview">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+                    
+                    <!-- Tweet Text Editor -->
+                    <div class="editor-section">
+                        <div class="editor-header">
+                            <label for="tweet-textarea">Compose your post:</label>
+                            <span id="chars-left" class="chars-left">280</span>
+                        </div>
+                        <div class="textarea-wrapper">
+                            <textarea id="tweet-textarea" rows="5" placeholder="Share your update on X..."></textarea>
+                        </div>
+                        
+                        <div class="editor-tools">
+                            <button id="btn-shorten" class="tool-btn" title="Intelligently shorten text to fit character limit">
+                                <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="4" y1="9" x2="20" y2="9"></line>
+                                    <line x1="4" y1="15" x2="20" y2="15"></line>
+                                    <line x1="10" y1="3" x2="8" y2="21"></line>
+                                    <line x1="16" y1="3" x2="14" y2="21"></line>
+                                </svg>
+                                Shorten to Fit
+                            </button>
+                            <button id="btn-emojis" class="tool-btn" title="Add tags and emojis">
+                                <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                                    <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                                    <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                                </svg>
+                                Emojis & Tag
+                            </button>
+                            <button id="btn-reset-tweet" class="tool-btn" title="Reset to default text">
+                                <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M2.5 2v6h6M21.5 22v-6h-6"/>
+                                    <path d="M22 11.5A10 10 0 0 0 9.57 3l-5.67 5.67M2 12.5a10 10 0 0 0 12.43 8.5l5.67-5.67"/>
+                                </svg>
+                                Reset Text
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="drawer-footer">
+                    <!-- Progress ring -->
+                    <div class="progress-ring-container">
+                        <svg class="progress-ring" width="30" height="30">
+                            <circle class="progress-ring__circle-bg" stroke="var(--border-color)" stroke-width="3" fill="transparent" r="12" cx="15" cy="15"/>
+                            <circle id="progress-ring-indicator" class="progress-ring__circle" stroke="var(--color-primary)" stroke-width="3" fill="transparent" r="12" cx="15" cy="15"/>
+                        </svg>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="copy-tweet-btn" class="btn btn-secondary">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            Copy Text
+                        </button>
+                        <button id="tweet-share-btn" class="btn btn-primary">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                            Post on X
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications Container -->
+        <div id="toast-container" class="toast-container"></div>
+    </div>
+
+    <!-- Main JavaScript App -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
